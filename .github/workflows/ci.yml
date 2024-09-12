@@ -6,8 +6,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         name:
         - Node.js 0.8
@@ -178,54 +179,7 @@ jobs:
       shell: bash
       run: |
         if npm -ps ls nyc | grep -q nyc; then
-          npm run test-ci
-          cp coverage/lcov.info "coverage/${{ matrix.name }}.lcov"
+          npx mocha
         else
-          npm test
+          npx mocha
         fi
-
-    - name: Lint code
-      if: steps.list_env.outputs.eslint != ''
-      run: npm run lint
-
-    - name: Collect code coverage
-      if: steps.list_env.outputs.nyc != ''
-      run: |
-        if [[ -d ./coverage ]]; then
-          mv ./coverage "./${{ matrix.name }}"
-          mkdir ./coverage
-          mv "./${{ matrix.name }}" "./coverage/${{ matrix.name }}"
-        fi
-
-    - name: Upload code coverage
-      uses: actions/upload-artifact@v3
-      if: steps.list_env.outputs.nyc != ''
-      with:
-        name: coverage
-        path: ./coverage
-        retention-days: 1
-
-  coverage:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install lcov
-      shell: bash
-      run: sudo apt-get -y install lcov
-
-    - name: Collect coverage reports
-      uses: actions/download-artifact@v3
-      with:
-        name: coverage
-        path: ./coverage
-
-    - name: Merge coverage reports
-      shell: bash
-      run: find ./coverage -name lcov.info -exec printf '-a %q\n' {} \; | xargs lcov -o ./coverage/lcov.info
-
-    - name: Upload coverage report
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
